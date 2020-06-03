@@ -25,10 +25,12 @@ public class show_info extends AppCompatActivity {
         name.setText(getIntent().getStringExtra("姓名"));
 
         height = findViewById(R.id.height2);
-        height.setText(getIntent().getStringExtra("身高"));
+        float heightValue = getIntent().getFloatExtra("身高", 0f);
+        height.setText(String.valueOf(heightValue));
 
         weight = findViewById(R.id.weight2);
-        weight.setText(getIntent().getStringExtra("体重"));
+        float weightValue = getIntent().getFloatExtra("体重", 0f);
+        weight.setText(String.valueOf(weightValue));
 
         sex = findViewById(R.id.sex2);
         sex.setText(getIntent().getStringExtra("性别"));

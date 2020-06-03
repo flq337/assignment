@@ -15,4 +15,10 @@
                 android:title="存储设置" />
         </menu>
     </item>
+    <item
+        android:id="@+id/contacts"
+        android:title="通讯录"
+        app:showAsAction="collapseActionView">
+
+    </item>
 </menu>
