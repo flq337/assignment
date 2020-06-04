@@ -1,4 +1,4 @@
-package com.example.q.store.dbstore;
+package com.example.q.dbstore;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;

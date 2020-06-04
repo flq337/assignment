@@ -2,7 +2,6 @@ package com.example.q;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.app.Activity;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
@@ -10,16 +9,12 @@ import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.PopupMenu;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.q.bean.Major;
-import com.example.q.store.dbstore.BaseInfoOperations;
-import com.example.q.store.dbstore.MajorInfoOperations;
+import com.example.q.dbstore.MajorInfoOperations;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 
 public class MajorActivity extends AppCompatActivity {

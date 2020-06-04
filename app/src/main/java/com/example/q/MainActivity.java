@@ -7,7 +7,6 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -51,8 +50,8 @@ import android.widget.CheckBox;
 
 import com.example.q.bean.Major;
 import com.example.q.bean.Student;
-import com.example.q.store.dbstore.BaseInfoOperations;
-import com.example.q.store.dbstore.MajorInfoOperations;
+import com.example.q.dbstore.BaseInfoOperations;
+import com.example.q.dbstore.MajorInfoOperations;
 
 
 public class MainActivity extends AppCompatActivity {

@@ -1,4 +1,4 @@
-package com.example.q.store.dbstore;
+package com.example.q.dbstore;
 
 
 public class InformationContract {
