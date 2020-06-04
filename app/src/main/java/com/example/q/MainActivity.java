@@ -6,6 +6,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 
 import android.Manifest;
@@ -18,8 +23,11 @@ import android.content.Context;
 
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.os.Build;
+import android.os.Environment;
 import android.os.IBinder;
+import android.provider.ContactsContract;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -46,6 +54,7 @@ import com.example.q.bean.Student;
 import com.example.q.store.dbstore.BaseInfoOperations;
 import com.example.q.store.dbstore.MajorInfoOperations;
 
+
 public class MainActivity extends AppCompatActivity {
     EditText name;
     CheckBox check1;
@@ -59,8 +68,10 @@ public class MainActivity extends AppCompatActivity {
     ListView listView;
 
 
-
-    String string;
+    /**
+     * 当前的存储设置，默认是数据库存储
+     */
+    public static StoreSettingType storeSettingType = StoreSettingType.DATABASE;
 
     private BService bService;
 
@@ -69,7 +80,8 @@ public class MainActivity extends AppCompatActivity {
 
 
     private ArrayAdapter<String> arr_adapter1;
-    private List<String> list2 = new ArrayList<String>();;
+    private List<String> list2 = new ArrayList<String>();
+    ;
 
 
     @Override
@@ -77,7 +89,7 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == 1) {
             if (grantResults.length <= 0 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
                 //用户拒绝授权
-                Toast.makeText(this, "无法获取SD卡读写权限", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "无法获取权限", Toast.LENGTH_SHORT).show();
                 finish();
             }
         } else {
@@ -96,10 +108,12 @@ public class MainActivity extends AppCompatActivity {
                     Manifest.permission.WRITE_EXTERNAL_STORAGE);
             int permission_read = ContextCompat.checkSelfPermission(MainActivity.this,
                     Manifest.permission.READ_EXTERNAL_STORAGE);
+            int permission_read_contacts = ContextCompat.checkSelfPermission(MainActivity.this,
+                    Manifest.permission.READ_CONTACTS);
             if (permission_write != PackageManager.PERMISSION_GRANTED
-                    || permission_read != PackageManager.PERMISSION_GRANTED) {
+                    || permission_read != PackageManager.PERMISSION_GRANTED || permission_read_contacts != PackageManager.PERMISSION_GRANTED) {
                 //申请权限，特征码自定义为1，可在回调时进行相关判断
-                ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
+                ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.READ_CONTACTS}, 1);
             }
         }
 
@@ -302,16 +316,56 @@ public class MainActivity extends AppCompatActivity {
                             sex, hobby, spinner.getSelectedItem().toString(), bService.getBMI(validHeight, validWeight));
                     Toast.makeText(getApplicationContext(), "学生信息更新成功", Toast.LENGTH_SHORT).show();
                 } else {
-                    //当前是新增操作
-                    BaseInfoOperations.getInstance().insertBaseInfo(name.getText().toString(),
-                            Float.parseFloat(heightText),
-                            Float.parseFloat(weightText),
-                            sex, hobby, spinner.getSelectedItem().toString(), bService.getBMI(validHeight, validWeight));
-                    Toast.makeText(getApplicationContext(), "创建学生信息成功", Toast.LENGTH_SHORT).show();
+                    //当前是新增操作,根据当前的存储设置存储到不同的地方
+                    String data_name = name.getText().toString();
+                    Float data_height = Float.parseFloat(heightText);
+                    Float data_weight = Float.parseFloat(weightText);
+                    String data_sex = sex;
+                    String data_hobby = hobby;
+                    String data_major = spinner.getSelectedItem().toString();
+                    String data_bmi = bService.getBMI(validHeight, validWeight);
+                    String studentData = data_name + "\n" +
+                            data_height + "\n" +
+                            data_weight + "\n" +
+                            data_sex + "\n" +
+                            data_hobby + "\n" +
+                            data_major + "\n" +
+                            data_bmi;
+                    switch (MainActivity.storeSettingType) {
+                        case DATABASE:
+                            BaseInfoOperations.getInstance().insertBaseInfo(
+                                    data_name,
+                                    data_height,
+                                    data_weight,
+                                    data_sex, data_hobby, data_major, data_bmi);
+                            Toast.makeText(getApplicationContext(), "创建学生信息成功", Toast.LENGTH_SHORT).show();
+                            break;
+                        case EXTERNAL:
+                            String status = Environment.getExternalStorageState();
+                            boolean mounted = status.equals(Environment.MEDIA_MOUNTED)
+                                    || status.equals(Environment.MEDIA_MOUNTED_READ_ONLY);
+                            if (mounted) {
+                                File externalFilesDir = getExternalFilesDir(null);
+                                File externalStudentInfo = new File(externalFilesDir, "externalStudentInfo");
+                                FileWriter fileWriter = new FileWriter(externalStudentInfo);
+                                fileWriter.write(studentData);
+                                fileWriter.close();
+                                Toast.makeText(getApplicationContext(), "保存到外部存储成功", Toast.LENGTH_SHORT).show();
+                            }else {
+                                Toast.makeText(getApplicationContext(), "外部存储不可用", Toast.LENGTH_SHORT).show();
+                            }
+                            break;
+                        case INTERNAL:
+                            FileOutputStream fos = openFileOutput("internalStudentInfo", Context.MODE_PRIVATE);
+                            fos.write(studentData.getBytes());
+                            fos.close();
+                            Toast.makeText(getApplicationContext(), "保存到内部存储成功", Toast.LENGTH_SHORT).show();
+                            break;
+                    }
                 }
                 //数据库改变之后刷新当前的学生信息列表
                 refreshStudentData();
-            } catch (NumberFormatException exception) {
+            } catch (IOException exception) {
                 Toast.makeText(getApplicationContext(), "请输入有效的身高体重", Toast.LENGTH_SHORT).show();
             }
         }
@@ -359,6 +413,7 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * 创建设置菜单
+     *
      * @param menu
      * @return
      */
@@ -374,9 +429,31 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(new Intent(MainActivity.this, MajorActivity.class));
                 break;
             case R.id.cunchushezhi:
-                finish();
+                startActivity(new Intent(MainActivity.this, StoreSettingActivity.class));
+                break;
             case R.id.contacts:
-                Toast.makeText(MainActivity.this, "ssss", Toast.LENGTH_SHORT).show();
+                //使用content provider获取联系人之后赋值给输入框
+                Cursor cursor = getContentResolver().query(
+                        ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                        null, null, null, null);
+                if (cursor != null) {
+                    if (cursor.moveToNext()) {
+                        String name = cursor.getString(cursor
+                                .getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
+                        this.name.setText(name);
+                        long l = BaseInfoOperations.getInstance().insertBaseInfo(name, null, null, null, null, null, null);
+                        if (l != -1) {
+                            Toast.makeText(getApplicationContext(), "创建学生信息成功", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(getApplicationContext(), "创建学生信息失败", Toast.LENGTH_SHORT).show();
+                        }
+                        refreshStudentData();
+                    } else {
+                        Toast.makeText(MainActivity.this, "通讯录暂无联系人", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(MainActivity.this, "获取联系人失败", Toast.LENGTH_SHORT).show();
+                }
                 break;
         }
         return super.onOptionsItemSelected(item);
@@ -399,13 +476,13 @@ public class MainActivity extends AppCompatActivity {
     /**
      * 当第一次启动application的时候初始化最初的数据
      */
-    private void firstLaunchInitializeData(){
+    private void firstLaunchInitializeData() {
         SharedPreferences sharedPreferences = getSharedPreferences("info2", MODE_PRIVATE);
         boolean initialized = sharedPreferences.getBoolean("initialized", false);
         if (!initialized) {
             BaseInfoOperations.getInstance().insertInitialData();
             MajorInfoOperations.getInstance().insertInitialData();
-            sharedPreferences.edit().putBoolean("initialized",true).apply();
+            sharedPreferences.edit().putBoolean("initialized", true).apply();
         }
     }
 
